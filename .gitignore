@@ -4,6 +4,11 @@ node_modules/
 # Build outputs
 dist/
 
+# TypeScript / Vite build artifacts
+*.tsbuildinfo
+*.config.d.ts
+*.config.js
+
 # Python
 __pycache__/
 *.pyc
