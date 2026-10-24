@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "building-accessible-interfaces": {
+      "source": "osmontero/opencode-skills",
+      "sourceType": "github",
+      "skillPath": "skills/building-accessible-interfaces/SKILL.md",
+      "computedHash": "f0a9e23166d820551677e7fe9cc7239e519a453ee193cd60c8dde32772bd5dde"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    },
+    "reviewing-interface-quality": {
+      "source": "osmontero/opencode-skills",
+      "sourceType": "github",
+      "skillPath": "skills/reviewing-interface-quality/SKILL.md",
+      "computedHash": "ec2148c26668b534e3537224901832036eed9d737a7467b53229306ac271b982"
+    },
+    "reviewing-security": {
+      "source": "osmontero/opencode-skills",
+      "sourceType": "github",
+      "skillPath": "skills/reviewing-security/SKILL.md",
+      "computedHash": "843b466672cf5a410209bf386d2d0d0e21299c07937a1d3050c724adbe2dae62"
+    },
+    "systematic-debugging": {
+      "source": "osmontero/opencode-skills",
+      "sourceType": "github",
+      "skillPath": "skills/systematic-debugging/SKILL.md",
+      "computedHash": "229a62ff3cc03035bfe3aa9ad46be4a52916d84fe55f4667bb0bc3c8730198bc"
+    },
+    "testing-webapps": {
+      "source": "osmontero/opencode-skills",
+      "sourceType": "github",
+      "skillPath": "skills/testing-webapps/SKILL.md",
+      "computedHash": "f4e9c84bb9d2a74b2d40834875527220926b20f1670929ad7fd862b707899d19"
+    }
+  }
+}

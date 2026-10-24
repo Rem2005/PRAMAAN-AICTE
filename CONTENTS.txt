@@ -1,0 +1,21 @@
+PRAMAAN–AICTE documentation package
+
+README.md — 61 lines
+AGENTS.md — 34 lines
+docs/PRD.md — 67 lines
+docs/architecture.md — 71 lines
+docs/TODO.md — 62 lines
+docs/GLOSSARY.md — 25 lines
+docs/data-model.md — 31 lines
+docs/api-contracts.md — 33 lines
+docs/security-privacy.md — 36 lines
+docs/testing.md — 33 lines
+docs/research-and-verification.md — 38 lines
+docs/frontend-design-system.md — 84 lines
+docs/adr/0001-modular-monolith.md — 12 lines
+docs/adr/0002-institution-side-identity-boundary.md — 12 lines
+docs/adr/0003-mock-external-integrations.md — 6 lines
+docs/adr/0004-candidate-not-verdict.md — 9 lines
+docs/audit/PROJECT_AUDIT.md — project audit
+docs/audit/IMPLEMENTATION_PLAN.md — implementation plan
+docs/PRAMAAN_AICTE_Complete_Master_Report_Final.docx — Word master research/redesign/implementation report
