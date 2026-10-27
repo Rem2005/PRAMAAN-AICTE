@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://localhost:5432/pramaan"
     secret_key: str = ""
     cors_origins: str = "http://localhost:5173"
+    max_upload_size_mb: int = 5
+    allowed_upload_extensions: str = ".csv"
+    upload_dir: str = "uploads"
+    # PBKDF2 work factor. An engineering parameter, not a compliance claim.
+    password_hash_iterations: int = 600_000
+    # Server-side session lifetime.
+    session_ttl_hours: int = 12
+    # Set to 1 outside local development so the session cookie is Secure.
+    cookie_secure: bool = False
 
     @property
     def is_development(self) -> bool:

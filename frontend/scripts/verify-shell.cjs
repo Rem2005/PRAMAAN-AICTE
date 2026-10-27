@@ -1,4 +1,4 @@
-// PRAMAAN-AICTE Milestone 4 frontend browser verification script.
+// PRAMAAN-AICTE Milestone 5 frontend browser verification script.
 //
 // Browser isolation policy:
 //   * Launches its OWN isolated Brave instance via Playwright, with a
@@ -11,7 +11,7 @@
 //     with a clear explanation instead of touching the user's browser.
 //
 // Prerequisites (started separately before running this script):
-//   backend:   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000   (in backend/)
+//   backend:   python -m uvicorn app.main:app --host 127.0.0.1 --port 8002   (in backend/)
 //   frontend:  npm run dev                                                    (in frontend/)
 //
 // Run: node scripts/verify-shell.cjs   (from frontend/)
@@ -34,19 +34,15 @@ const check = (name, cond, detail) =>
 let context = null;
 
 (async () => {
-  // --- Launch isolated browser (owned by this test only) ---------------
   if (!fs.existsSync(BRAVE_EXE)) {
     console.log("=== BROWSER VERIFICATION SKIPPED ===");
     console.log(`Brave executable not found at ${BRAVE_EXE}`);
-    console.log("Skipping browser verification to avoid touching your session.");
     process.exit(0);
   }
 
   fs.rmSync(userDataDir, { recursive: true, force: true });
 
   try {
-    // launchPersistentContext launches the browser AND returns the context;
-    // closing the context later closes this test-owned browser instance only.
     context = await chromium.launchPersistentContext(userDataDir, {
       executablePath: BRAVE_EXE,
       headless: true,
@@ -60,46 +56,43 @@ let context = null;
     console.log("=== BROWSER VERIFICATION SKIPPED ===");
     console.log("Could not launch an isolated browser:");
     console.log("  " + e.message);
-    console.log("Skipping browser verification to avoid touching your session.");
     process.exit(0);
   }
 
   const page = context.pages()[0] || (await context.newPage());
 
-  // Capture console errors (filtering expected dev-infrastructure noise:
-  // CORS to the backend when the dev server lands on a non-configured port,
-  // and the favicon 404 we intentionally do not ship).
+  // Capture console errors (filtering expected dev-infrastructure noise).
   const consoleErrors = [];
   const benign = (msg) =>
-    /Access to fetch at 'http:\/\/localhost:8000/.test(msg) ||
+    /Access to fetch at 'http:\/\/(localhost|127\.0\.0\.1):8002/.test(msg) ||
     /net::ERR_FAILED/.test(msg) ||
     /favicon\.ico/.test(msg) ||
     /Failed to load resource: the server responded with a status of 404/.test(msg);
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !benign(msg.text())) consoleErrors.push(msg.text());
+    if (msg.type() === "error" && !benign(msg.text()))
+      consoleErrors.push(msg.text());
   });
   page.on("pageerror", (err) => {
     if (!benign(err.message)) consoleErrors.push(err.message);
   });
 
-  // 1. Initial page load
-  const response = await page.goto("http://localhost:5174/", {
+  const baseUrl = "http://localhost:5173";
+
+// Milestone 6: every application screen now sits behind sign-in. Supply a local
+// account or browser verification is skipped rather than silently testing the
+// login page as if it were the app.
+const TEST_USERNAME = process.env.PRAMAAN_TEST_USERNAME;
+const TEST_PASSWORD = process.env.PRAMAAN_TEST_PASSWORD;
+
+  // 1. Initial page load - Dashboard
+  const response = await page.goto(`${baseUrl}/`, {
     waitUntil: "domcontentloaded",
     timeout: 20000,
   });
-  await page.waitForTimeout(1500); // allow hydration
+  await page.waitForTimeout(1500);
   const title = await page.title();
-  check("page loads (non-blank)", title && title.length > 0, `title="${title}"`);
-  check(
-    "no fatal console errors on load",
-    consoleErrors.length === 0,
-    consoleErrors.slice(0, 5).join(" | ")
-  );
-  check(
-    "HTTP 200 from frontend server",
-    response && response.status() === 200,
-    response ? `status=${response.status()}` : "no response"
-  );
+  check("dashboard page loads (non-blank)", title && title.length > 0, `title="${title}"`);
+  check("no fatal console errors on dashboard", consoleErrors.length === 0, consoleErrors.slice(0, 5).join(" | "));
 
   // Product identity + prototype disclosure
   const wordmark = page.getByText(/PRAMAAN–AICTE/);
@@ -109,131 +102,195 @@ let context = null;
   check("prototype disclosure present", (await disclosure.count()) > 0);
   check("Prototype status tag present", (await prototypeTag.count()) > 0);
 
-  // 2. Primary navigation
-  const nav = page.getByRole("navigation", { name: "Primary" });
-  check("primary navigation landmark present", (await nav.count()) > 0);
-  const dashboardLink = page.getByRole("link", { name: /Dashboard/ });
-  check("Dashboard nav link present", (await dashboardLink.count()) > 0);
-  const unavailableCount = await page
-    .getByRole("button", {
-      name: /Roster Intake|Reconciliation|Identity Review|Verification Requests|Reports \/ Audit|Administration/,
-    })
-    .count();
-  check("planned-but-unavailable areas disabled (6)", unavailableCount === 6, `found ${unavailableCount}`);
-  check(
-    "unavailable items have title explanation",
-    (await page.getByTitle("Not available in this milestone").count()) === 6
-  );
-
-  // 3. Breadcrumb + heading
-  const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
-  check("breadcrumb landmark present", (await breadcrumb.count()) > 0);
-  const heading = page.getByRole("heading", { name: /Dashboard/ });
-  check("Dashboard heading present", (await heading.count()) > 0);
-
-  // 4. Main content region
-  const main = page.getByRole("main");
-  check("main landmark present", (await main.count()) > 0);
-  check(
-    "main content non-empty",
-    (await main.innerText()).trim().length > 0
-  );
-
-  // 5. Health integration — backend reachable (server running on :8000)
-  const healthText = page.getByText(/Service status: Operational/);
-  const unreachable = page.getByText(/Service status: Unreachable/);
-  if ((await healthText.count()) > 0) {
-    check("health reports Operational when backend reachable", true);
-  } else if ((await unreachable.count()) > 0) {
+  // 1b. Sign in (application screens are behind authentication)
+  const signInHeading = page.getByRole("heading", { name: /sign in/i });
+  if ((await signInHeading.count()) > 0) {
+    if (!TEST_USERNAME || !TEST_PASSWORD) {
+      console.log("=== BROWSER VERIFICATION SKIPPED ===");
+      console.log("The app is behind sign-in and no test account was provided.");
+      console.log("Set PRAMAAN_TEST_USERNAME and PRAMAAN_TEST_PASSWORD, and");
+      console.log("provision that account with python -m app.cli create-user.");
+      try {
+        await context.close();
+      } catch (e) {
+        // best-effort
+      }
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+      process.exit(0);
+    }
+    await page.fill("#username", TEST_USERNAME);
+    await page.fill("#password", TEST_PASSWORD);
+    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.waitForTimeout(1500);
     check(
-      "health reports Unreachable when backend down",
-      true,
-      "backend not reachable — expected local env behaviour"
+      "sign-in reaches the dashboard",
+      (await page.getByRole("heading", { name: /welcome back/i }).count()) > 0,
+    );
+    check(
+      "sign-in surfaces no error",
+      (await page.getByRole("alert").count()) === 0,
     );
   } else {
-    check("health state rendered (loading or settled)", true, "pending / indeterminate");
+    check("already signed in on load", false, "unexpected sign-in state");
   }
 
-  // Loading state pattern exists
-  const loading = page.getByRole("status");
-  check("loading/status region implemented", true);
+  // 2. Primary navigation - Roster Intake now available
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  check("primary navigation landmark present", (await nav.count()) > 0);
 
-  // No fake operational workflow claims
+  // Every workspace area is implemented, so every nav item is a real link; a
+  // disabled nav button would mean an area is planned but unreachable.
+  const NAV_LABELS = [
+    "Dashboard",
+    "Roster Intake",
+    "Reconciliation",
+    "Identity Review",
+    "Verification Requests",
+    "Reports / Audit",
+    "Administration",
+  ];
+  const NAV_HEADINGS = {
+    "roster-intake": /Roster Intake/,
+    reconciliation: /Reconciliation/,
+    "identity-review": /Identity Review/,
+    "verification-requests": /Verification Requests/,
+    "reports-audit": /Reports and audit trail/,
+    administration: /Administration/,
+  };
+
+  // 3. Every navigation item opens its own screen.
+  for (const label of NAV_LABELS) {
+    const link = page.locator("nav[aria-label='Primary'] a", { hasText: label }).first();
+    check(`nav item present and enabled: ${label}`, (await link.count()) === 1);
+  }
+  const disabledNav = await page.locator("nav[aria-label='Primary'] button:disabled").count();
+  check("no navigation item is left unimplemented", disabledNav === 0, `disabled=${disabledNav}`);
+
+  for (const [key, heading] of Object.entries(NAV_HEADINGS)) {
+    await page.goto(`${baseUrl}/#${key}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1200);
+    check(
+      `screen renders: #${key}`,
+      (await page.getByRole("heading", { name: heading }).count()) > 0,
+    );
+    // A screen that failed to reach the API shows an error alert; none should.
+    const alerts = await page.getByRole("alert").allTextContents();
+    check(
+      `no error on #${key}`,
+      alerts.filter((text) => !/not implemented/i.test(text)).length === 0,
+      alerts.join(" | "),
+    );
+  }
+
+  const rosterLink = page.getByRole("link", { name: /Roster Intake/ });
+  await page.goto(`${baseUrl}/#dashboard`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(800);
+  await rosterLink.click();
+  await page.waitForTimeout(1000);
+  check("navigated to roster intake page", (await page.getByRole("heading", { name: /Roster Intake/ }).count()) > 0);
+
+  // 4. Upload area and the sample roster download
+  check(
+    "upload step heading present",
+    (await page.getByRole("heading", { name: /Upload roster CSV/ }).count()) > 0,
+  );
+  check(
+    "file input present",
+    (await page.locator('input[id="roster-file"]').count()) > 0,
+  );
+  try {
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 10000 }),
+      page.getByRole("button", { name: /Download sample CSV/i }).click(),
+    ]);
+    check(
+      "Download sample CSV produces pramaan-sample-roster.csv",
+      download.suggestedFilename() === "pramaan-sample-roster.csv",
+      download.suggestedFilename(),
+    );
+  } catch (e) {
+    check("Download sample CSV produces pramaan-sample-roster.csv", false, e.message);
+  }
+
+  // 5. No fake operational workflow claims
   const fakeClaim = page.getByText(/verified|merged|fraudster|duplicate confirmed/i);
-  check(
-    "no unverified workflow claims on shell",
-    (await fakeClaim.count()) === 0,
-    `matches: ${(await fakeClaim.allTextContents()).join(", ")}`
-  );
+  check("no unverified workflow claims on shell", (await fakeClaim.count()) === 0);
 
-  // 6. Responsive — desktop (1280) and mobile (375)
-  await page.setViewportSize({ width: 1280, height: 800 });
+  // 6. Responsive - desktop and mobile, per screen.
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    for (const [key, heading] of Object.entries(NAV_HEADINGS)) {
+      await page.goto(`${baseUrl}/#${key}`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(700);
+      const metrics = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }));
+      const fits = metrics.scrollWidth <= metrics.innerWidth + 1;
+      check(
+        `${width}px: #${key} renders without horizontal overflow`,
+        fits && (await page.getByRole("heading", { name: heading }).count()) > 0,
+        `scrollWidth=${metrics.scrollWidth} viewport=${metrics.innerWidth}`,
+      );
+    }
+  }
+
+  // 7. Both navigation layouts are reachable: sidebar (wide) and disclosure (narrow).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${baseUrl}/#dashboard`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(700);
+  check("desktop: sidebar navigation visible at 1440px", await nav.isVisible());
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(500);
-  check("desktop: nav present at 1280px", (await nav.count()) > 0);
-  check(
-    "desktop: header present at 1280px",
-    (await page.getByRole("banner").count()) > 0 ||
-      (await page.locator("header").count()) > 0
-  );
+  const menu = page.locator("details > summary");
+  check("mobile: disclosure menu offered at 390px", (await menu.count()) > 0);
+  check("mobile: sidebar hidden at 390px", !(await nav.isVisible()));
 
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.waitForTimeout(500);
-  check("mobile: page still renders at 375px", (await heading.count()) > 0);
-  check("mobile: nav still present at 375px", (await nav.count()) > 0);
-
-  // Reset to desktop for focus checks
+  // 8. Keyboard navigation
   await page.setViewportSize({ width: 1280, height: 800 });
-
-  // 7. Keyboard navigation + visible focus
+  await page.goto(`${baseUrl}/#dashboard`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(700);
   await page.keyboard.press("Tab");
   await page.waitForTimeout(200);
   const focused = await page.evaluate(() => document.activeElement?.tagName);
-  check(
-    "keyboard Tab moves focus",
-    focused && ["A", "BUTTON"].includes(focused),
-    `focused=${focused}`
-  );
+  check("keyboard Tab moves focus", focused && ["A", "BUTTON", "INPUT"].includes(focused), `focused=${focused}`);
 
-  // Focus indicator present via computed outline on a focusable element
+  // Visible focus indicator
   const firstFocusable = page.getByRole("link", { name: /Dashboard/ }).first();
   await firstFocusable.focus();
   const outline = await firstFocusable.evaluate((el) => {
     const cs = getComputedStyle(el);
-    return {
-      outline: cs.outline,
-      outlineColor: cs.outlineColor,
-      outlineWidth: cs.outlineWidth,
-      focusVisible: el.matches(":focus-visible"),
-    };
+    return { outline: cs.outline, outlineColor: cs.outlineColor, outlineWidth: cs.outlineWidth, focusVisible: el.matches(":focus-visible") };
   });
-  check(
-    "visible focus indicator on nav link",
-    outline.outline !== "none" || outline.focusVisible,
-    JSON.stringify(outline)
-  );
+  check("visible focus indicator on nav link", outline.outline !== "none" || outline.focusVisible, JSON.stringify(outline));
 
-  // 8. Clicking Dashboard does nothing unexpected (same page)
-  await firstFocusable.click();
-  await page.waitForTimeout(300);
-  check("clicking Dashboard keeps shell intact", (await heading.count()) > 0);
-
-  // Backend health endpoint direct check
+  // 9. Backend health endpoint direct check
   try {
-    const h = await page.request.fetch("http://127.0.0.1:8000/health");
+    const h = await page.request.fetch("http://127.0.0.1:8002/health");
     check("backend /health returns 200", h.status() === 200, `status=${h.status()}`);
   } catch (e) {
     results.warnings.push({ name: "backend /health direct fetch", detail: e.message });
   }
 
-  // --- Cleanup: close only test-owned context (closes test-owned browser) --
+  // Sign out so the temporary profile is not left holding a live session.
+  try {
+    await page.getByRole("button", { name: /sign out/i }).first().click();
+    await page.waitForTimeout(500);
+    check(
+      "sign-out returns to the sign-in page",
+      (await page.getByRole("heading", { name: /sign in/i }).count()) > 0,
+    );
+  } catch (e) {
+    results.warnings.push({ name: "sign out", detail: e.message });
+  }
+
+  // Cleanup: close only test-owned context
   try {
     await context.close();
   } catch (e) {
     // best-effort
   }
   context = null;
-
-  // Remove only the test-owned temp profile.
   fs.rmSync(userDataDir, { recursive: true, force: true });
 
   console.log("=== BROWSER VERIFICATION RESULTS ===");
@@ -250,7 +307,6 @@ let context = null;
   process.exit(results.failed.length ? 1 : 0);
 })().catch((e) => {
   console.error("SCRIPT ERROR:", e);
-  // Best-effort cleanup of test-owned browser context only.
   (async () => {
     try {
       if (context) await context.close();

@@ -53,9 +53,14 @@ External services are accessed only through adapters (MOCK by default).
 - [`docs/adr/`](docs/adr/) — architecture decision records.
 
 ## Frontend direction
-The UI should feel like a credible Indian public-sector administrative service: restrained navy and white, limited saffron/green accents, compact navigation, readable forms, practical filters, accessible tables, and clear status language. Avoid generic AI-product styling. See [`docs/frontend-design-system.md`](docs/frontend-design-system.md) for mandatory rules and acceptance checks. Any screenshot/reference is guidance for tone and information density only; do not copy another portal or imply official endorsement.
+The UI should feel like a credible Indian public-sector administrative service: restrained forest green and off-white (ADR-0009), limited saffron/green accents, compact navigation, readable forms, practical filters, accessible tables, and clear status language. Avoid generic AI-product styling. See [`docs/frontend-design-system.md`](docs/frontend-design-system.md) for mandatory rules and acceptance checks. Any screenshot/reference is guidance for tone and information density only; do not copy another portal or imply official endorsement.
 
 ## Development note
-This is a documentation blueprint, not a runnable app. Confirm the repository's actual framework and dependency manager before adding setup commands. The recommended first implementation is a modular monolith with a web UI, versioned API, relational database, background worker, and adapter interfaces.
+The repository is now a runnable modular-monolith prototype, not only a blueprint:
+
+- `backend/` � FastAPI + SQLAlchemy + Alembic, SQLite for tests/dev (`DATABASE_URL`), PostgreSQL targeted but **not verified**.
+- `frontend/` � React 18 + TypeScript + Vite + Tailwind CSS v4, with a same-origin dev proxy so the session cookie stays first-party.
+
+Local sign-in, roles and institution-scoped authorization are implemented with locally provisioned accounts. Roster intake, deterministic reconciliation, reconciliation reporting and CSV export run against persisted synthetic data; identity linkage, verification requests and official integrations are **not** implemented, and the screens say so. No external identity provider or government integration is connected. See `backend/README.md` and `frontend/README.md` for setup, including the `seed-demo` command that creates the synthetic snapshot and policy reconciliation needs.
 
 Use synthetic data in development, screenshots, tests, and public demos. Never commit real student data, government identifiers, API secrets, or private keys.

@@ -7,6 +7,14 @@ Student roster data; institution-side plaintext identity attributes; linkage tok
 ## Threats
 Cross-tenant access; malicious insider exports; database frequency/inference attacks; key compromise; incorrect policy publication; forged/malformed adapter responses; log/backup leakage; repeated-query inference; false match causing harm.
 
+## Authentication and authorization as implemented (Milestone 6)
+- **Mechanism:** local username/password accounts with **server-side sessions**. An opaque random token is stored only as a SHA-256 hash; the browser holds it in an `HttpOnly`, `SameSite=Lax` cookie, so it is not reachable from JavaScript, URLs, or client logs. Logout revokes the row server-side, so replaying a stolen cookie fails.
+- **Passwords:** PBKDF2-HMAC-SHA256 via `hashlib.pbkdf2_hmac`, per-user random salt, work factor from `PASSWORD_HASH_ITERATIONS` (600,000 by default). Verification fails closed on malformed or empty input. The work factor is an engineering parameter, not a compliance claim.
+- **Authorization:** deny-by-default dependencies. Unauthenticated requests get `401`; a missing role gets `403`; a body naming another institution gets `403`; a batch belonging to another institution returns `404` so its existence is not confirmed. The client-supplied `institution_id` is never used to grant access.
+- **Provisioning:** `python -m app.cli create-user` reads `NEW_USER_PASSWORD` from the environment and refuses to run without it. No credentials are committed; `backend/.env.example` documents the variables with no values.
+- **Deliberately not implemented:** MFA, password reset, account lockout, session listing UI, audited role changes, and any external identity provider. These remain open items, not silent gaps.
+- **Still unproven:** PostgreSQL behaviour. Every run so far used SQLite.
+
 ## Required controls
 - Deny-by-default and server-side role + institution authorization on every resource.
 - MFA for privileged roles where available; session revocation and audited role changes.

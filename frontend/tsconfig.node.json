@@ -5,7 +5,12 @@
     "moduleResolution": "bundler",
     "target": "ES2022",
     "lib": ["ES2023", "DOM"],
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    // Keep build-mode output out of the project root. Without an outDir,
+    // `tsc -b` writes vite.config.js next to vite.config.ts, and Vite resolves
+    // vite.config.js *first* — so the dev server silently ran a stale copy of
+    // this file (wrong proxy port) after every `npm run build`.
+    "outDir": "./node_modules/.tmp/tsconfig-node"
   },
   "include": ["vite.config.ts"]
 }

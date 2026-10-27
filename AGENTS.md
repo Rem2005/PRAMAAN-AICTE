@@ -21,7 +21,7 @@ Read `docs/PRD.md`, `docs/architecture.md`, `docs/TODO.md`, `docs/GLOSSARY.md`, 
 15. Follow `docs/frontend-design-system.md` as a required UI specification, not optional inspiration.
 16. The interface must resemble a restrained, credible Indian public-sector administrative portal—not a generic AI/SaaS dashboard.
 17. Never fabricate official emblems, government seals, verification badges, agency endorsements, or integration status. Use approved assets only when usage is authorised; otherwise use a text wordmark and clearly identify the prototype.
-18. Prefer compact headers, conventional navigation, readable forms, dense but scannable tables, clear status labels, and restrained navy/white with limited Indian tricolour accents.
+18. Prefer compact headers, conventional navigation, readable forms, dense but scannable tables, clear status labels, and restrained forest-green/off-white surfaces with limited Indian tricolour accents (see ADR-0009).
 19. Avoid gratuitous gradients, glassmorphism, glowing borders, oversized hero sections, excessive rounded cards, decorative AI imagery, emoji-heavy UI, and animations without functional purpose.
 20. Every visible control must work or be explicitly disabled with an explanation. Never present placeholder metrics or mock records as real institutional data; persistently label demo data and mock integrations.
 21. Meet keyboard, focus, contrast, semantic-label, validation, and responsive-layout requirements. Test important screens at desktop and mobile widths.

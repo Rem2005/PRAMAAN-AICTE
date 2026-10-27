@@ -7,7 +7,7 @@ Build a calm, credible, accessible administrative service for institution operat
 
 ## 2. Visual principles
 - **Administrative, not promotional:** start authenticated users on a task-oriented dashboard. Avoid giant hero banners, sales copy, oversized metrics, and marketing CTAs.
-- **Restrained palette:** use deep navy for primary navigation/actions, white and neutral grey for surfaces, and small saffron/green accents where they help identify context. Define design tokens centrally; do not scatter arbitrary hex values through components.
+- **Restrained palette:** use forest green (`#1b5e3a`) for primary navigation and actions, an off-white canvas with white content surfaces, thin neutral borders, and small saffron/green accents where they help identify context. Define design tokens centrally in `frontend/src/index.css`; do not scatter arbitrary hex values through components. (An earlier revision specified deep navy; ADR-0009 records forest green as the single primary so the repository states one direction.)
 - **Typography:** use a highly legible system sans-serif stack, consistent type scale, clear hierarchy, comfortable line height, and strong table readability. Avoid oversized display fonts.
 - **Shape and depth:** mostly square or modestly rounded controls, subtle separators, minimal shadows. No glassmorphism, neon glow, gradient borders, animated blobs, or decorative AI artwork.
 - **Density:** fit useful operational context above the fold while preserving whitespace and readability. Prefer tables, filter bars, tabs, breadcrumbs, and compact summary strips to a grid of oversized cards.
